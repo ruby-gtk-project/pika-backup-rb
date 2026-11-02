@@ -13,9 +13,15 @@ and actions the `.ui` cannot show.
 
 Scan totals, upstream: **858 widget rows** across 107 files, **142 CSS class
 attachments**, **111 distinct signals**, **20 action references**.
-Port totals: **1 file** (`lib/pika_backup/application.rb`), a stub
-`Adwaita::StatusPage` saying the port has not been written. Nothing below
-exists yet except that one file.
+
+Port state, re-checked at the second survey pass (after `6f5d815f`, "Port the
+leaf widgets, combo-row models, stylesheet and app shell"): **13 of 48
+components exist** — `lib/pika_backup/` holds 13 `.rb` files plus
+`style.css` and the 17 upstream SVG icons. Every section heading below carries
+its state: *(ported)* for the ones that exist, nothing for the 35 that do not.
+The app shell (`application.rb`) is real but still stands a placeholder
+`Adwaita::StatusPage` where the overview page belongs, so the window, both
+navigation pages and every dialog are unported.
 
 ## Shape of the port
 
@@ -48,7 +54,7 @@ than translated:
 
 ## Application and window
 
-### `pika-backup/src/app.rs`, `src/action.rs` → `lib/pika_backup/application.rb` — the application object *(exists as a stub)*
+### `pika-backup/src/app.rs`, `src/action.rs` → `lib/pika_backup/application.rb` — the application object *(ported — shell only: menu, actions, accels, icons, stylesheet; a placeholder `Adwaita::StatusPage` stands in for the overview page)*
 
 Not a widget; holds every app-level action and accelerator.
 
@@ -88,7 +94,7 @@ Conditional: on `map`, if exactly one backup config exists the window opens
 straight on the detail page; also re-runs the borg version check and redoes
 size estimates for backups that were already running.
 
-### `data/resources/shortcuts-dialog.ui` → `lib/pika_backup/shortcuts_dialog.rb` — keyboard shortcuts
+### `data/resources/shortcuts-dialog.ui` → `lib/pika_backup/shortcuts_dialog.rb` — keyboard shortcuts *(ported)*
 
 | Widget | × | CSS | Signals | Notes |
 |---|---:|---|---|---|
@@ -96,7 +102,7 @@ size estimates for backups that were already running.
 | `Adw.ShortcutsSection` | 1 | — | — | title "General" |
 | `Adw.ShortcutsItem` | 5 | — | — | `<Ctrl>N` Set Up New Backup; `app.shortcuts`; `app.quit`; `<alt>Left` Back; `F10` Open Menu |
 
-### `pika-backup/src/widget/dialog/about.rs` → `lib/pika_backup/about_dialog.rb` — About
+### `pika-backup/src/widget/dialog/about.rs` → `lib/pika_backup/about_dialog.rb` — About *(ported)*
 
 `Adw.AboutDialog` built entirely in code: app name/icon/version/website/issue
 URL, developer name, 2 developers, 2 artists, copyright, translator credits, a
@@ -104,7 +110,7 @@ long two-section `comments` blob with markup, 2 `add_link` entries (Open
 Collective, GitHub Sponsors) and a generated `debug_info` string (versions,
 sandbox state, OS release, Flatpak info, user and global autostart files).
 
-### `data/resources/style.css` → `lib/pika_backup/style.css` — stylesheet
+### `data/resources/style.css` → `lib/pika_backup/style.css` — stylesheet *(ported)*
 
 207 lines defining 33 classes the widgets above and below reference:
 `accent-icon`, `card`, `container`, `content`, `description`, `dialog-page`,
@@ -285,42 +291,42 @@ Problem rows: metered connection, another backup running, browsing,
 on battery, device missing, network missing, plus a hint row. Levels map to
 `ok-icon`/`warning-icon`/`error-icon`/spinner on the status icon.
 
-### `src/widget/detail/schedule/frequency.rs` → `lib/pika_backup/frequency.rb` — combo model
+### `src/widget/detail/schedule/frequency.rs` → `lib/pika_backup/frequency.rb` — combo model *(ported)*
 
 `PikaBackupScheduleFrequency` GObject with a `display` property; 4 values
 (hourly, daily, weekly, monthly).
 
-### `src/widget/detail/schedule/weekday.rs` → `lib/pika_backup/weekday.rb` — combo model
+### `src/widget/detail/schedule/weekday.rs` → `lib/pika_backup/weekday.rb` — combo model *(ported)*
 
 `PikaBackupWeekday` GObject with a `display` property; 7 values.
 
-### `src/widget/detail/schedule/prune_preset.rs` → `lib/pika_backup/prune_preset.rb` — combo model
+### `src/widget/detail/schedule/prune_preset.rs` → `lib/pika_backup/prune_preset.rb` — combo model *(ported)*
 
 `PikaBackupPrunePreset` GObject with a `display` property; "Keep Many",
 "Keep Some", "Custom", and the keep-counts each preset implies.
 
 ## Shared widgets
 
-### `src/widget/status_row.rs` → `lib/pika_backup/status_row.rb` — the status row (`PikaStatusRow`)
+### `src/widget/status_row.rs` → `lib/pika_backup/status_row.rb` — the status row (`PikaStatusRow`) *(ported)*
 
 `Adw.ActionRow` subclass, `numeric` class, one-line subtitle, a `StatusIcon`
 added as prefix, with `icon-name` and `level` bound through to the icon. Used
 8× across the app (overview row ×2, backup page, archives page, schedule page,
 backup info dialog, check result dialog, schedule problem rows).
 
-### `src/widget/status_icon.rs` → `lib/pika_backup/status_icon.rb` — the status icon (`PkStatusIcon`)
+### `src/widget/status_icon.rs` → `lib/pika_backup/status_icon.rb` — the status icon (`PkStatusIcon`) *(ported)*
 
 `Gtk.Box` subclass containing a `Gtk.Stack` over a `Gtk.Image` (`status-icon`)
 and an `Adw.Spinner` (`row-icon`, 24×24). `level` swaps the image's class
 between `ok-icon`, `warning-icon`, `error-icon`, nothing, or shows the spinner.
 
-### `src/widget/location_tag.rs` → `lib/pika_backup/location_tag.rb` — a path/exclude tag
+### `src/widget/location_tag.rs` → `lib/pika_backup/location_tag.rb` — a path/exclude tag *(ported)*
 
 Built in code: `Gtk.Box` with class `tag`, an optional symbolic `Gtk.Image`,
 and a middle-ellipsised `Gtk.Label`. Used by the overview row, the transfer
 option row (twice).
 
-### `src/widget/folder_row.{rs,ui}` → `lib/pika_backup/folder_row.rb` — folder picker row (`PkFolderRow`)
+### `src/widget/folder_row.{rs,ui}` → `lib/pika_backup/folder_row.rb` — folder picker row (`PkFolderRow`) *(ported)*
 
 `Adw.ActionRow` subclass, activatable, accessible role button, a
 `folder-open-symbolic` `Gtk.Image` suffix. `activate` opens the folder chooser
@@ -342,7 +348,7 @@ as subtitle, clearing it removes the class.
 Exposes `encrypted`, `valid` and `description` properties the setup and
 preferences pages bind against.
 
-### `src/widget/navigation/dialog_page.{rs,ui}` → `lib/pika_backup/dialog_page.rb` — dialog page base (`PkDialogPage`)
+### `src/widget/navigation/dialog_page.{rs,ui}` → `lib/pika_backup/dialog_page.rb` — dialog page base (`PkDialogPage`) *(ported)*
 
 `Adw.NavigationPage` subclass with class `dialog-page`, used as the parent of
 8 setup pages. `Adw.ToolbarView` → `Adw.HeaderBar` (title hidden, title
@@ -352,7 +358,7 @@ a hidden `dim-label description` subtitle `Gtk.Label`, and a `content`
 `Gtk.Box` that subclasses append into. Carries `labelled-by` /
 `described-by` accessibility relations and a `default-widget` property.
 
-### `src/widget/navigation/spinner_page.{rs,ui}` → `lib/pika_backup/spinner_page.rb` — spinner page base (`PkSpinnerPage`)
+### `src/widget/navigation/spinner_page.{rs,ui}` → `lib/pika_backup/spinner_page.rb` — spinner page base (`PkSpinnerPage`) *(ported)*
 
 `Adw.NavigationPage` subclass, class `spinner-page`, `can-pop` false.
 `Adw.ToolbarView` → `Adw.HeaderBar` (no title buttons, `Adw.Bin` title
