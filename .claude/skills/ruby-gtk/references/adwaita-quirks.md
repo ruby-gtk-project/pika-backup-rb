@@ -390,3 +390,32 @@ When you encounter a new Adwaita widget:
 3. Try positional arguments in the order shown
 4. If keyword arguments are shown, try them but expect failure
 5. Document the working pattern here
+
+---
+
+## 7. `Adwaita.init` Is Mandatory
+
+`require 'adwaita'` loads the bindings but does **not** initialise libadwaita.
+Until `Adwaita.init` runs, libadwaita's stylesheet is never installed: every
+window renders in GTK's default theme, Adwaita typography and rounded cards are
+absent, and the Adwaita style variables (`--success-color`, `--warning-bg-color`,
+`--accent-color`, …) that an app stylesheet builds on do not resolve.
+
+Nothing warns about this. The widgets all construct and behave correctly, so the
+only symptom is that the app looks wrong — which is easy to blame on your own
+CSS. An A/B render of the same `Adwaita::StatusPage` with and without an app
+stylesheet produced byte-identical PNGs; adding `Adwaita.init` was what changed
+them.
+
+`Adwaita::Application` would call it for you, but that widget is unreliable in
+these bindings (see §5), so an app built on `Gtk::Application` has to call it
+itself — in the `startup` handler, before any stylesheet of its own is added:
+
+```ruby
+app.signal_connect('startup') do
+  Adwaita.init
+  load_stylesheet
+end
+```
+
+`Adwaita.initialized?` reports whether it has run.
