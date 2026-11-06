@@ -5,6 +5,8 @@ require "adwaita"
 
 require_relative "about_dialog"
 require_relative "shortcuts_dialog"
+require_relative "app_window"
+require_relative "overview_page"
 
 module PikaBackup
   # The port's application object: the stylesheet, the app-level actions and
@@ -17,10 +19,10 @@ module PikaBackup
   # `remove`, `backup.start`, `backup.show`, and the D-Bus actions) are not
   # registered, so the menu shows only what works.
   #
-  # The window's geometry is app_window.ui's. Its content is not: upstream puts
-  # an AdwNavigationView holding the overview and detail pages there, and
-  # neither page is ported yet, so the window shows a status page naming what
-  # the port can reach instead.
+  # The window itself is AppWindow (app_window.{rs,ui}): a toast overlay
+  # around a navigation view holding the overview page. The detail page it
+  # also holds upstream is not ported yet, so the navigation view only ever
+  # has the one page on it.
   #
   # House style (see .claude/skills/ruby-gtk): every widget is a memoized
   # method, all configuration lives in its `tap`, assembly happens only in
@@ -29,14 +31,6 @@ module PikaBackup
     APPLICATION_ID = "org.rubygtkproject.PikaBackup"
 
     HELP_URI = "help:pika-backup"
-
-    # app_window.ui's geometry.
-    WIDTH_REQUEST = 360
-    HEIGHT_REQUEST = 294
-    DEFAULT_WIDTH = 782
-    DEFAULT_HEIGHT = 665
-
-    TITLE = "Pika Backup"
 
     # overview.ui's primary menu, in its order.
     MENU_ITEMS = [
@@ -72,17 +66,8 @@ module PikaBackup
         end
 
         app.signal_connect("activate") do
-          window.tap do |win|
-            win.content = toolbar_view
-          end
-
-          toolbar_view.tap do |view|
-            view.add_top_bar(header_bar)
-            view.content = status_page
-          end
-
-          header_bar.pack_end(menu_button)
-
+          window.build
+          overview_page.add_header_end(menu_button)
           window.present
         end
       end
@@ -94,17 +79,15 @@ module PikaBackup
     # object comes from Gtk and only the window is Adwaita.
     def app = @app ||= Gtk::Application.new(APPLICATION_ID, :default_flags)
 
-    def window
-      @window ||= Adwaita::ApplicationWindow.new(app).tap do |win|
-        win.title = TITLE
-        win.width_request = WIDTH_REQUEST
-        win.height_request = HEIGHT_REQUEST
-        win.set_default_size(DEFAULT_WIDTH, DEFAULT_HEIGHT)
-      end
-    end
+    def window = @window ||= AppWindow.new(app, overview_page: overview_page.build)
 
-    def toolbar_view = @toolbar_view ||= Adwaita::ToolbarView.new
-    def header_bar = @header_bar ||= Adwaita::HeaderBar.new
+    # No backend yet reads configured backups into the overview page, so it
+    # opens with none — exactly the state upstream's own `BACKUP_CONFIG` store
+    # is in before anything has been added to it. SetupDialog, which the "Add
+    # Backup" button opens upstream, is not ported yet either, so no
+    # `on_add_backup` callback is wired up — the button is present, as
+    # upstream's always is, and does nothing until that dialog exists.
+    def overview_page = @overview_page ||= OverviewPage.new
 
     def menu_button
       @menu_button ||= Gtk::MenuButton.new.tap do |button|
@@ -118,17 +101,6 @@ module PikaBackup
     def menu
       @menu ||= Gio::Menu.new.tap do |model|
         MENU_ITEMS.each { |label, action| model.append(label, action) }
-      end
-    end
-
-    # Scaffolding, not upstream UI: it stands in for the overview page until
-    # that is ported, and names the parts of the port that already work.
-    def status_page
-      @status_page ||= Adwaita::StatusPage.new.tap do |page|
-        page.icon_name = "overview-symbolic"
-        page.title = TITLE
-        page.description = "The main menu reaches the keyboard shortcuts, the help and the about dialog. " \
-                           "The overview of configured backups is not ported yet."
       end
     end
 

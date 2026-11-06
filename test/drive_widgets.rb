@@ -215,7 +215,44 @@ GtkDriver.drive(application, shots: SHOTS) do |d, app|
     app.window.visible_dialog&.close
   end
 
-  d.step("swap in the leaf-widget gallery") { app.toolbar_view.content = gallery }
+  d.step("the overview page starts empty") do
+    d.check("empty state is visible") { app.overview_page.main_stack.visible_child == app.overview_page.empty_page }
+    d.check("backups list is empty") { app.overview_page.backups.empty? }
+  end
+
+  d.step("the overview page shows a configured backup") do
+    repo = Struct.new(:icon, :subtitle).new("drive-harddisk-symbolic", "/mnt/backup")
+    config = Struct.new(
+      :id,
+      :title,
+      :repo,
+      :include,
+    ).new(
+      "1",
+      "Home",
+      repo,
+      ["", "Pictures"],
+    )
+    app.overview_page.backups = [config]
+  end
+
+  d.step("the configured backup renders") do
+    d.check("preferences page is visible") do
+      app.overview_page.main_stack.visible_child == app.overview_page.preferences_page
+    end
+    d.check("one row was built") { !app.overview_page.main_backups.first_child.nil? }
+  end
+
+  d.step("screenshot the overview page") { d.shot("00-overview-page") }
+
+  d.step("clearing the backups returns to the empty state") do
+    app.overview_page.backups = []
+    d.check("empty state is visible again") do
+      app.overview_page.main_stack.visible_child == app.overview_page.empty_page
+    end
+  end
+
+  d.step("swap in the leaf-widget gallery") { app.window.content = gallery }
 
   d.step("the leaf widgets render") do
     d.check("ok row carries the ok css class") do
@@ -278,7 +315,7 @@ GtkDriver.drive(application, shots: SHOTS) do |d, app|
   # The tag row sits below the gallery's viewport, and an unrealised widget has
   # no render node, so it gets the window to itself.
   d.step("show the location tags alone") do
-    app.toolbar_view.content = Adwaita::PreferencesPage.new.tap { |page| page.add(tag_group) }
+    app.window.content = Adwaita::PreferencesPage.new.tap { |page| page.add(tag_group) }
   end
 
   d.step("screenshot the location tags") { d.shot("04b-location-tags") }

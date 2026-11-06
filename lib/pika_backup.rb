@@ -16,3 +16,8 @@ require_relative "pika_backup/folder_row"
 # Base classes for pages inside a navigation view.
 require_relative "pika_backup/dialog_page"
 require_relative "pika_backup/spinner_page"
+
+# The main window and the overview page it opens on.
+require_relative "pika_backup/overview_row"
+require_relative "pika_backup/overview_page"
+require_relative "pika_backup/app_window"
