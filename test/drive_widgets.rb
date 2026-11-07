@@ -178,6 +178,14 @@ GtkDriver.drive(application, shots: SHOTS) do |d, app|
     d.check("Ctrl+Q and Ctrl+W quit") do
       app.app.get_accels_for_action("app.quit") == ["<Control>q", "<Control>w"]
     end
+    d.check("Ctrl+? opens shortcuts") do
+      app.app.get_accels_for_action("app.shortcuts") == ["<Control>question"]
+    end
+    d.check("the menu button's popover opens") do
+      app.menu_button.active = true
+      app.menu_button.active?
+    end
+    app.menu_button.active = false
     d.shot("01-main-window")
   end
 
@@ -241,6 +249,30 @@ GtkDriver.drive(application, shots: SHOTS) do |d, app|
       app.overview_page.main_stack.visible_child == app.overview_page.preferences_page
     end
     d.check("one row was built") { !app.overview_page.main_backups.first_child.nil? }
+    d.check("the row shows the never-run status") do
+      row = app.overview_page.main_backups.first_child
+      row.status.title == PikaBackup::OverviewRow::NEVER_RUN_TITLE &&
+        row.status.subtitle == PikaBackup::OverviewRow::NEVER_RUN_SUBTITLE
+    end
+    d.check("the row shows the no-schedule status") do
+      app.overview_page.main_backups.first_child.schedule_status.title ==
+        PikaBackup::OverviewRow::NO_SCHEDULE_TITLE
+    end
+    d.check("activating the location row does not crash (no backend wired yet)") do
+      app.overview_page.main_backups.first_child.location_row.activate
+      true
+    end
+    d.check("activating the schedule-status row does not crash") do
+      app.overview_page.main_backups.first_child.schedule_status.activate
+      true
+    end
+    d.check("the add-backup header button does not crash with no handler") do
+      app.overview_page.add_backup_button.activate
+      true
+    end
+    d.check("overview-row carries its css class") do
+      app.overview_page.main_backups.first_child.css_classes.include?("overview-row")
+    end
   end
 
   d.step("screenshot the overview page") { d.shot("00-overview-page") }
