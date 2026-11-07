@@ -61,11 +61,14 @@ should read as a debt, not a boundary.
 > `pika-backup-monitor/src/`.
 > Port: no file in `lib/pika_backup/` corresponds to any of it.
 
-## Weak hits: twelve "not ported (yet)" code comments
+## Weak hits: thirteen "not ported (yet)" code comments
 
 `lib/pika_backup/{about_dialog,status_row,application,dialog_page,
-location_tag,app_window,overview_page,overview_row}.rb` carry twelve
-comments using the phrase "not ported" or "is not ported yet." Read in
+location_tag,app_window,overview_page,overview_row,setup_types}.rb` carry
+thirteen comments using the phrase "not ported" or "is not ported yet" (one
+new one, `setup_types.rb:20`, since the prior pass — it names
+`crate::utils::borg::parse_borg_command_line_args` as the specific missing
+upstream function, same pattern as the rest). Read in
 context (quoted in full during this pass), **every one of them already does
 what the skill asks for anyway**: each names the specific upstream behaviour
 missing, cites the upstream file it would come from, and says what the port
@@ -87,19 +90,29 @@ information surfaces from doing it, unlike the `component-inventory.md` hit.
 
 ## The runtime gate's own framing is the accountability risk this round
 
-The round's stated gate — `drive_ok=true, 72 checks passed, 0 failed,
-covering 15 components` — is accurate as a statement about what ran. It
-becomes a false green the moment it is read, without the three other
-reports in this audit, as evidence of parity: `test-parity.md` shows the 72
-checks are new driver assertions with no upstream counterpart (0/N upstream
-tests ported), `translation-parity.md` shows 0% of upstream's strings
-survive, and `component-parity.md` shows 39 of 48 components don't exist.
-"0 failed" is true only because nothing that doesn't exist was asked to run.
-This is not a hit the scanner finds — it's a document (the gate report
-itself) making a true, narrow claim that reads, out of context, as a much
-broader one, and it is the single most important finding of this audit:
-**the gate is real and it is not evidence of parity, and nothing in this
-round's reporting said so before this pass.**
+This round's stated gate — `drive_ok=true, 108 checks passed, 0 failed,
+covering 20 components` — is accurate as a statement about what ran, and
+grew (from 72/15 in the prior round) by real new coverage: `e989cadc` added
+checks for the `launch_help` crash fix and for `ConfirmationDialog`/
+`Message`'s response paths, on top of genuinely new files (`error_message.rb`,
+`ui_utils.rb`, `setup_types.rb`) that `78ae80e8` ported. None of that changes
+the shape of the risk. It still becomes a false green the moment it is read,
+without the three other reports in this audit, as evidence of parity:
+`test-parity.md` shows the 108 checks are driver assertions with no upstream
+counterpart (0/N upstream tests ported, still exactly 0 after this round's
+additions), `translation-parity.md` shows 0% of upstream's strings survive
+(still 0 after the three new files, confirmed by re-grepping this pass), and
+`component-parity.md` shows 36 of 48 components don't exist. "0 failed" is
+true only because nothing that doesn't exist was asked to run, and "20
+components" is the driver script's own count of test subjects, not a count
+of upstream units (`component-identification.md` flags the same gap in this
+round's gate phrasing). This is not a hit the scanner finds — it's a
+document (the gate report itself) making a true, narrow claim that reads,
+out of context, as a much broader one, and it remains the single most
+important finding of this audit: **the gate is real and it is not evidence
+of parity, growing it with real new checks does not change that, and this
+is the second round running where the gate's own phrasing invites reading it
+as parity evidence.**
 
 ## Verdict
 

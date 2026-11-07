@@ -14,14 +14,19 @@ and actions the `.ui` cannot show.
 Scan totals, upstream: **858 widget rows** across 107 files, **142 CSS class
 attachments**, **111 distinct signals**, **20 action references**.
 
-Port state, re-checked at the second survey pass (after `6f5d815f`, "Port the
-leaf widgets, combo-row models, stylesheet and app shell"): **13 of 48
-components exist** — `lib/pika_backup/` holds 13 `.rb` files plus
-`style.css` and the 17 upstream SVG icons. Every section heading below carries
-its state: *(ported)* for the ones that exist, nothing for the 35 that do not.
-The app shell (`application.rb`) is real but still stands a placeholder
-`Adwaita::StatusPage` where the overview page belongs, so the window, both
-navigation pages and every dialog are unported.
+Port state, re-checked at this pass (through `e989cadc`, "Fix launch_help's
+uncaught exception and extend the drive script"): **18 of 48 components
+exist** (37.5%) — `lib/pika_backup/` holds 18 `.rb` files (the 13 from the
+prior pass, plus `app_window.rb`, `overview_page.rb`, `overview_row.rb` from
+`7d2613b5`, and `error_message.rb` + `ui_utils.rb` + `setup_types.rb` from
+`78ae80e8`; `setup/{types,actions}.rs` counts as one upstream unit and is only
+half-ported) plus `style.css` and the 17 upstream SVG icons. Every section
+heading below carries its state: *(ported)* for the ones that exist, nothing
+for the 30 that do not. `application.rb` now builds a real `AppWindow`
+instead of a placeholder `Adwaita::StatusPage`, but `app.setup` still has no
+`SetupDialog` to present (see `.reports/component-parity.md`), so the entire
+onboarding flow, both remaining detail/archives/schedule tabs and every modal
+dialog are still unported.
 
 ## Shape of the port
 
@@ -78,7 +83,7 @@ Startup also forces the `Adwaita` icon theme and sets the default window icon.
 Non-widget sibling behaviour: `gio::Notification` for "Backup Operation
 Running", and a `Quit` shell status message.
 
-### `pika-backup/src/widget/app_window.{rs,ui}` → `lib/pika_backup/app_window.rb` — the main window
+### `pika-backup/src/widget/app_window.{rs,ui}` → `lib/pika_backup/app_window.rb` — the main window *(ported — see Gap 1 in `.reports/component-parity.md`)*
 
 | Widget | × | CSS | Signals | Notes |
 |---|---:|---|---|---|
@@ -123,7 +128,7 @@ loses the disk-usage bar, the status icon colours and every tag pill.
 
 ## Overview
 
-### `src/widget/overview.{rs,ui}` → `lib/pika_backup/overview_page.rb` — the backup list
+### `src/widget/overview.{rs,ui}` → `lib/pika_backup/overview_page.rb` — the backup list *(ported — see Gap 2 in `.reports/component-parity.md`)*
 
 | Widget | × | CSS | Signals | Notes |
 |---|---:|---|---|---|
@@ -149,7 +154,7 @@ Open for Browsing"), otherwise asks a confirmation ("Remove Backup Setup?" /
 "Removing the setup will not delete any archives" / "_Cancel" / "_Remove
 Setup") before deleting the config and its stored password.
 
-### `src/widget/overview/row.{rs,ui}` → `lib/pika_backup/overview_row.rb` — one backup in the list
+### `src/widget/overview/row.{rs,ui}` → `lib/pika_backup/overview_row.rb` — one backup in the list *(ported — status-tracking/scheduling backends it would read from are not ported)*
 
 | Widget | × | CSS | Signals | Notes |
 |---|---:|---|---|---|
@@ -626,7 +631,7 @@ long subtitle about prefix uniqueness, an `Adw.EntryRow` "Archive Prefix"
 (activates-default) and a `pill suggested-action` "_Save" button →
 `on_submit_button`.
 
-### `src/widget/dialog/setup/{types,actions}.rs` → `lib/pika_backup/setup_types.rb`, `lib/pika_backup/setup_actions.rb`
+### `src/widget/dialog/setup/{types,actions}.rs` → `lib/pika_backup/setup_types.rb`, `lib/pika_backup/setup_actions.rb` *(half-ported — `setup_types.rb` exists; `setup_actions.rb` (repo create/peek/transfer/init, needs the borg backend) does not)*
 
 Non-widget support for the wizard: the `SetupAction` / `SetupLocationKind`
 enums, URL parsing with its user-facing errors ("Incomplete URL or borg
@@ -636,7 +641,7 @@ and the repo creation / peek / transfer / init flows.
 
 ## Cross-cutting UI
 
-### `src/error.rs` → `lib/pika_backup/error_message.rb` — error presentation
+### `src/error.rs` → `lib/pika_backup/error_message.rb` — error presentation *(ported)*
 
 Every failure in the app surfaces here. When the window is mapped and some
 toplevel is active it shows an `Adw.AlertDialog` (heading = primary text, body
@@ -646,7 +651,7 @@ sends a `gio::Notification` instead. Also the "Backup with id “{}” already
 exists." / "Could not find backup configuration with id “{}”." messages and
 the keyring-unavailable explanation.
 
-### `src/utils.rs` → `lib/pika_backup/ui_utils.rb` — shared dialogs, toasts and helpers
+### `src/utils.rs` → `lib/pika_backup/ui_utils.rb` — shared dialogs, toasts and helpers *(ported)*
 
 - `ConfirmationDialog` — `Adw.AlertDialog` with `cancel`/`accept` responses
   and an optional destructive accent; used for "Remove Backup Setup?",

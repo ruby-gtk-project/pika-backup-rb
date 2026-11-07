@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Upstream | `main` @ `253c7c4666d215eff2dc00a01409d1c6f299df6b` |
-| Port | `ruby` @ `6ea638d7110f944a994138c4ca966f05c8d81d2c` |
+| Port | `ruby` @ `e989cadc05c6667b19ede4c237bc66cd3aad0461` |
 | Upstream catalogue | 38 languages (`po/LINGUAS`), 180 files in `po/POTFILES.in`, 11 translated help languages |
 | Upstream msgids (lower bound) | 331 distinct `gettext("...")` call sites in `.rs` + 211 `translatable="yes"` attributes across `.ui` files (39 of them plain `label` properties counted directly; the rest are other translatable property kinds — `title`, `tooltip-text`, etc. — not individually re-tallied in this pass) |
 | Port msgids | **0** |
@@ -49,10 +49,14 @@ grep -rn 'gettext\|_(\|FastGettext\|GetText' lib/ exe/    # 0 matches
   (confirmed by inspection — neither file names a translation gem).
 - No `_()`, `n_()`, `gettext()` or equivalent marker call anywhere in
   `lib/pika_backup/*.rb` or `exe/pika-backup`.
-- Every user-visible string in the 15 files that exist — "Pika Backup",
+- Every user-visible string in the 18 files that exist — "Pika Backup",
   "No Backup Configured", "_Setup Backup", "Back Up _Now", every status row
-  title, every tooltip in `component-inventory.md`'s own tables — is a bare
-  Ruby string literal.
+  title, every tooltip in `component-inventory.md`'s own tables, and the new
+  `error_message.rb`/`ui_utils.rb`/`setup_types.rb` strings ("Close",
+  "Remove Backup Setup?", "Incomplete URL or borg syntax", etc.) — is a bare
+  Ruby string literal (confirmed by re-running
+  `grep -rn 'gettext\|_(\|FastGettext\|GetText' lib/ exe/` against the
+  current tree: still 0 matches).
 
 ## Why this is total, not partial
 

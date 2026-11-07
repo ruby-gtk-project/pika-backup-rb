@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Upstream | `main` @ `253c7c4666d215eff2dc00a01409d1c6f299df6b` |
-| Port | `ruby` @ `6ea638d7110f944a994138c4ca966f05c8d81d2c` |
-| Units with parity | **9 / 48** |
+| Port | `ruby` @ `e989cadc05c6667b19ede4c237bc66cd3aad0461` |
+| Units with parity | **12 / 48** |
 
 Units counted from `.reports/component-inventory.md`'s own section headings
 (one `###` per upstream component). 48 is the inventory's count; nothing in
@@ -23,13 +23,16 @@ this review changes it.
 | Main window | `widget/app_window.{rs,ui}` | `app_window.rb` | **gap** — see below |
 | Overview page / overview row | `widget/overview.{rs,ui}`, `widget/overview/row.{rs,ui}` | `overview_page.rb`, `overview_row.rb` | **gap** — see below |
 | Application object | `src/app.rs`, `src/action.rs` | `application.rb` | **gap** — see below |
+| Error presentation | `src/error.rs` | `error_message.rb` | parity on the dialog/notification split and the two named error strings (see Gap 5) |
+| Shared UI helpers | `src/utils.rs` | `ui_utils.rb` | parity on `ConfirmationDialog`, `folder_chooser_dialog`, `show_notice`, `new_action_row_with_gicon`, `clear`, `StatusLevel` (see Gap 5) |
+| Setup value types (half) | `widget/dialog/setup/types.rs` | `setup_types.rb` | parity on `SetupAction`/`SetupLocationKind`/URL parsing/arg parsing; `actions.rs` (repo create/peek/transfer/init) has no counterpart — **gap**, counted separately below |
 
 Every unit not listed above (`detail_page.rb`, `backup_page.rb`,
 `archives_page.rb`, `schedule_page.rb`, `schedule_status.rb`,
 `encryption_settings.rb`, all 13 dialogs, all 11 setup-wizard pages,
-`error_message.rb`, `ui_utils.rb`, `backup_status.rb`, `repo.rb`, `shell.rb` /
+`setup_actions.rb`, `backup_status.rb`, `repo.rb`, `shell.rb` /
 `notification.rb` / `status.rb` / `operation.rb`, `toast_size_estimate.rb`)
-has **no port file at all**. That is 39 of 48 units with zero widgets, zero
+has **no port file at all**. That is 36 of 48 units with zero widgets, zero
 CSS, zero signals and zero translated strings on the port side — not a
 styling or behaviour gap, an existence gap. Per the skill's own rule
 ("Never report parity from the scan alone... never compare app-wide totals
@@ -48,10 +51,13 @@ line reading "rest unported":
   create or add a backup configuration in the real app. Missing. `app.setup`
   is bound to `<Ctrl>N` in `app_window.rb` and fires an action that, per
   `application.rb`, has no `SetupDialog` to present.
-- **Backend-adjacent UI** (`error_message.rb`, `ui_utils.rb`,
+- **Backend-adjacent UI still missing** (`setup_actions.rb`,
   `backup_status.rb`, `repo.rb`, `shell.rb`/`notification.rb`/`status.rb`/
-  `operation.rb`, `toast_size_estimate.rb`) — every error dialog, toast and
-  status computation the rest of the UI depends on at runtime. Missing.
+  `operation.rb`, `toast_size_estimate.rb`) — status computation, device
+  mount flow, background/shell messages and the size-estimate toast the rest
+  of the UI depends on at runtime. Missing. (`error_message.rb` and
+  `ui_utils.rb` were ported this round — see the table above and Gap 5 below
+  — but everything in this bullet that would call into them still isn't.)
 
 ## Gaps found by axis, on the units that do exist
 
@@ -86,22 +92,38 @@ line reading "rest unported":
    identical rule bodies (named Adwaita colours vs. hex literals is exactly
    the kind of difference the `component-parity` skill calls out as a real
    gap that looks like a pass). That diff is still owed.
+5. **Error presentation / shared UI helpers — unreachable from most call
+   sites.** `error_message.rb` and `ui_utils.rb` are genuine, driven ports of
+   `error.rs` and `utils.rs` (confirmed in `test/drive_widgets.rb`'s new
+   checks for `ConfirmationDialog`'s destructive/non-destructive default
+   responses and `Message`/`ErrorMessage`'s notification-fallback and
+   user-canceled paths), and `application.rb#launch_help` now uses
+   `error_message.rb`'s `Handler` instead of silently swallowing
+   `Gio::IOError::NotSupported`. But upstream's actual callers of these two
+   files — `repo.rb`'s mount failures, `shell.rb`'s borg-question prompts,
+   the setup wizard's URL-parse errors, every dialog's own failure path — do
+   not exist yet, so `error_message.rb` and `ui_utils.rb` today are called
+   from exactly one site (`launch_help`) instead of the dozens upstream
+   wires them into. Parity on the file that exists; a large reachability gap
+   on how much of the app can actually trigger it.
 
 ## Text axis
 
 Not evaluated per-component in this pass beyond the blanket finding in
 `.reports/translation-parity.md`: the port has zero translation markers
 anywhere in `lib/` or `exe/`, so every Text column in every table above that
-would otherwise read `✓` reads **✗** instead, for all 15 existing files, not
-only the 39 missing ones. A component with correct widgets, correct CSS and
-correct signals still fails this axis if its strings are bare literals, and
-that is exactly the state of all 15 ported files.
+would otherwise read `✓` reads **✗** instead, for all 18 existing files, not
+only the 36 missing ones (plus `setup_actions.rb`, missing and not counted in
+either). A component with correct widgets, correct CSS and correct signals
+still fails this axis if its strings are bare literals, and that is exactly
+the state of all 18 ported files.
 
 ## Verdict
 
-**9 / 48 units have component parity** (counting generously — the combo
-models and app shell are partial). 39 units do not exist. Of the 9 that do,
-none has passed the text axis, because none has any translation markup to
-check. This is not a port with scattered gaps; it is a port where the
+**12 / 48 units have component parity** (counting generously — the combo
+models, app shell and setup-types-half are partial). 36 units do not exist.
+Of the 12 that do, none has passed the text axis, because none has any
+translation markup to check. This is not a port with scattered gaps; it is a
+port where the
 onboarding flow, the entire detail view, every dialog and the backend
-plumbing that the existing 9 units call into are simply not there yet.
+plumbing that the existing 12 units call into are simply not there yet.
