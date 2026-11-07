@@ -9,12 +9,27 @@ $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
 
 require_relative "gtk_driver"
 require "pika_backup"
+require_relative "../lib/pika_backup/setup_types"
 
 ENV["XDG_CONFIG_HOME"] = Dir.mktmpdir
 
 SHOTS = File.expand_path("../tmp/shots", __dir__)
 
 application = PikaBackup::Application.new
+
+# Every descendant of `widget` for which the block answers true. ActionRow
+# wraps its prefixes and suffixes in its own internal boxes, so a child added
+# through `add_prefix` is never `widget.first_child` itself.
+def find_widgets(widget, found = [], &block)
+  found.tap do
+    found << widget if block.call(widget)
+    child = widget.first_child
+    while child
+      find_widgets(child, found, &block)
+      child = child.next_sibling
+    end
+  end
+end
 
 # A gallery of the leaf widgets, assembled the way a page would assemble them.
 def gallery
@@ -153,6 +168,85 @@ GtkDriver.drive(application, shots: SHOTS) do |d, app|
     end
   end
 
+  d.step("the setup-wizard value types") do
+    d.check("borg shorthand canonicalizes to ssh://") do
+      location, error = PikaBackup::SetupRepoLocation.parse_url("user@host:path")
+      error.nil? && location.to_s == "ssh://user@host/./path"
+    end
+    d.check("an explicit ssh:// URL round-trips") do
+      location, error = PikaBackup::SetupRepoLocation.parse_url("ssh://user@host/path")
+      error.nil? && location.remote? && location.to_s == "ssh://user@host/path"
+    end
+    d.check("a path with no scheme and no colon is rejected") do
+      PikaBackup::SetupRepoLocation.parse_url("/local/path") == [nil, "Incomplete URL or borg syntax"]
+    end
+    d.check("an empty string is rejected the same way") do
+      PikaBackup::SetupRepoLocation.parse_url("") == [nil, "Incomplete URL or borg syntax"]
+    end
+    d.check("a local file:// URL is local, not remote") do
+      location, error = PikaBackup::SetupRepoLocation.parse_url("file:///tmp/repo")
+      error.nil? && location.local? && location.value.is_a?(Gio::File)
+    end
+    d.check("a URL with no path is rejected") do
+      PikaBackup::SetupRepoLocation.parse_url("ssh://host") ==
+        [nil, "The remote location must have a specified path."]
+    end
+
+    d.check("extra borg args shell-split and round-trip") do
+      args = PikaBackup::SetupCommandLineArgs.from_s(%(--foo bar --baz "qux quux"))
+      args.to_a == ["--foo", "bar", "--baz", "qux quux"] &&
+        args.to_s == %(--foo bar --baz qux\\ quux)
+    end
+    d.check("unmatched quoting falls back to no arguments rather than raising") do
+      PikaBackup::SetupCommandLineArgs.from_s('"unterminated').empty?
+    end
+    d.check("NONE is the empty sentinel") { PikaBackup::SetupCommandLineArgs::NONE.empty? }
+  end
+
+  d.step("the UiUtils helpers") do
+    d.check("rel_path strips $HOME") do
+      PikaBackup::UiUtils.rel_path(File.join(GLib.home_dir, "src", "x")) == "src/x"
+    end
+    d.check("rel_path leaves a path outside $HOME alone") do
+      PikaBackup::UiUtils.rel_path("/not/home/path") == "/not/home/path"
+    end
+    d.check("ellipsize_end passes short text through") do
+      PikaBackup::UiUtils.ellipsize_end("hi", 5) == "hi"
+    end
+    d.check("ellipsize_end cuts and marks long text") do
+      PikaBackup::UiUtils.ellipsize_end("hello world", 5) == "hell…"
+    end
+    d.check("Message.ellipsize_multiline passes short text through") do
+      PikaBackup::Message.ellipsize_multiline("short") == "short"
+    end
+    d.check("Message.ellipsize_multiline keeps head and tail of long text") do
+      long = "a" * 1000
+      result = PikaBackup::Message.ellipsize_multiline(long)
+      result.start_with?("a" * 300) && result.end_with?("a" * 200) && result.include?("…")
+    end
+
+    d.check("new_action_row_with_gicon builds a plain activatable row") do
+      row = PikaBackup::UiUtils.new_action_row_with_gicon
+      row.is_a?(Adwaita::ActionRow) && row.activatable? &&
+        find_widgets(row) { |w| w.is_a?(Gtk::Image) && w.css_classes.include?("large-row-icon") }.empty?
+    end
+    d.check("new_action_row_with_gicon with an icon name adds a prefix image") do
+      row = PikaBackup::UiUtils.new_action_row_with_gicon("edit-symbolic")
+      icon = find_widgets(row) { |w| w.is_a?(Gtk::Image) && w.css_classes.include?("large-row-icon") }.first
+      !icon.nil? && icon.icon_name == "edit-symbolic"
+    end
+
+    d.check("clear_listbox removes dynamic rows but keeps '-'-named structural ones") do
+      box = Gtk::ListBox.new
+      kept = Gtk::ListBoxRow.new.tap { |row| row.name = "-header" }
+      removed = Gtk::ListBoxRow.new
+      box.append(kept)
+      box.append(removed)
+      PikaBackup::UiUtils.clear_listbox(box)
+      box.get_row_at_index(0).equal?(kept) && box.get_row_at_index(1).nil?
+    end
+  end
+
   d.step("the main window") do
     d.check("title") { app.window.title == "Pika Backup" }
     d.check("libadwaita is initialised") { Adwaita.initialized? }
@@ -186,8 +280,13 @@ GtkDriver.drive(application, shots: SHOTS) do |d, app|
       app.menu_button.active?
     end
     app.menu_button.active = false
-    d.shot("01-main-window")
   end
+
+  # Closing the popover and shooting in the same tick raced the popover's own
+  # close animation: the window had not been laid out again yet, so
+  # Gtk::WidgetPaintable produced no render node at all. Giving the close its
+  # own tick before the shot settles that.
+  d.step("screenshot the main window") { d.shot("01-main-window") }
 
   d.step("open the shortcuts dialog") { app.app.activate_action("shortcuts", nil) }
 
@@ -221,6 +320,93 @@ GtkDriver.drive(application, shots: SHOTS) do |d, app|
   d.step("screenshot the about dialog") do
     d.shot("03-about-dialog")
     app.window.visible_dialog&.close
+  end
+
+  # Regression check for a real bug this driver caught: launch_help rescued
+  # GLib::Error, but Gio::AppInfo.launch_default_for_uri on a URI scheme with
+  # no handler (certain in this sandbox, likely on any box with no help
+  # viewer) raises Gio::IOError::NotSupported, which is not a GLib::Error
+  # subclass — so the rescue never matched and activating Help crashed the
+  # whole application. Fixed in application.rb to rescue StandardError too.
+  d.step("the Help action fails in this sandbox and is caught, not crashed") do
+    app.app.activate_action("help", nil)
+  end
+
+  d.step("the failure surfaced as the error dialog, not a crash") do
+    d.check("a dialog is up") { !app.window.visible_dialog.nil? }
+    d.check("it is an AdwAlertDialog, not the about or shortcuts dialog") do
+      app.window.visible_dialog.is_a?(Adwaita::AlertDialog)
+    end
+    app.window.visible_dialog&.close
+  end
+
+  d.step("ErrorMessage without a window sends a notification instead") do
+    @notified = nil
+    fake_app = Struct.new(:sent) do
+      def send_notification(_id, notification) = (self.sent = notification)
+    end.new(nil)
+    # An object answering neither mapped? nor active? takes the
+    # notification branch of Message#show_transient_for, exactly as a
+    # background operation with no window in front would.
+    PikaBackup::ErrorMessage.message(PikaBackup::Message.short("Something failed"))
+                             .show_transient_for(Object.new, fake_app) { |response| @notified = response }
+    d.check("a notification was sent") { !fake_app.sent.nil? }
+    d.check("on_response still fired with close") { @notified == "close" }
+  end
+
+  d.step("ErrorMessage.user_canceled short-circuits to nothing") do
+    canceled = PikaBackup::ErrorMessage.user_canceled
+    d.check("it reports canceled") { canceled.user_canceled? }
+    d.check("its message text is empty") { canceled.message_text == "" }
+    d.check("show_transient_for is a no-op (no dialog, no raise)") do
+      canceled.show_transient_for(app.window, app.app) { |_r| raise "should not be called" }
+      true
+    end
+  end
+
+  d.step("the confirmation dialog opens with the caller's text") do
+    @confirmed = nil
+    PikaBackup::UiUtils.confirmation_dialog(
+      app.window, "Remove backup?", "This cannot be undone.", "Cancel", "Remove",
+      destructive: true,
+    ) { |ok| @confirmed = ok }
+  end
+
+  d.step("it carries the right heading, body, and destructive accept button") do
+    dialog = app.window.visible_dialog
+    d.check("it is showing") { !dialog.nil? }
+    d.check("heading is the title") { dialog.heading == "Remove backup?" }
+    d.check("body is the message") { dialog.body == "This cannot be undone." }
+    d.check("accept is labelled Remove") { dialog.get_response_label("accept") == "Remove" }
+    d.check("cancel is labelled Cancel") { dialog.get_response_label("cancel") == "Cancel" }
+    d.check("accept is styled destructive") do
+      dialog.get_response_appearance("accept") == :destructive
+    end
+    d.check("cancel is the close and default response (destructive default)") do
+      dialog.close_response == "cancel" && dialog.default_response == "cancel"
+    end
+    d.shot("03b-confirmation-dialog")
+    dialog.close
+  end
+
+  d.step("closing without choosing never calls the accept block") do
+    d.check("the block was never run") { @confirmed.nil? }
+    d.check("the dialog is gone") { app.window.visible_dialog.nil? }
+  end
+
+  d.step("a non-destructive confirmation defaults to accept") do
+    PikaBackup::UiUtils.confirmation_dialog(
+      app.window, "Check archives?", "This may take a while.", "Cancel", "Check",
+    ) { |ok| @confirmed = ok }
+  end
+
+  d.step("its default response is accept, not cancel") do
+    dialog = app.window.visible_dialog
+    d.check("default is accept") { dialog.default_response == "accept" }
+    d.check("accept is not styled destructive") do
+      dialog.get_response_appearance("accept") != :destructive
+    end
+    dialog.close
   end
 
   d.step("the overview page starts empty") do

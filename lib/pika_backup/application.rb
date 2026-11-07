@@ -164,7 +164,7 @@ module PikaBackup
       # that ErrorMessage exists to carry it.
       def launch_help
         Gio::AppInfo.launch_default_for_uri(HELP_URI, nil)
-      rescue GLib::Error => e
+      rescue StandardError, GLib::Error => e
         Handler.handle(ErrorMessage.message(Message.short(e.message)), window, app)
       end
 
