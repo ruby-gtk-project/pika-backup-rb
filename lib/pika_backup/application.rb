@@ -7,6 +7,8 @@ require_relative "about_dialog"
 require_relative "shortcuts_dialog"
 require_relative "app_window"
 require_relative "overview_page"
+require_relative "error_message"
+require_relative "ui_utils"
 
 module PikaBackup
   # The port's application object: the stylesheet, the app-level actions and
@@ -157,10 +159,13 @@ module PikaBackup
     # to be registered here.
       def present_shortcuts = ShortcutsDialog.new.build.present(window)
 
+      # Upstream logs this failure and moves on; this port additionally
+      # surfaces it through error::Handler's dialog/notification path, now
+      # that ErrorMessage exists to carry it.
       def launch_help
         Gio::AppInfo.launch_default_for_uri(HELP_URI, nil)
-      rescue GLib::Error
-        nil
+      rescue GLib::Error => e
+        Handler.handle(ErrorMessage.message(Message.short(e.message)), window, app)
       end
 
     # Upstream guards quitting against running backup operations. The
