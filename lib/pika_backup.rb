@@ -12,6 +12,7 @@ require_relative "pika_backup/status_icon"
 require_relative "pika_backup/status_row"
 require_relative "pika_backup/location_tag"
 require_relative "pika_backup/folder_row"
+require_relative "pika_backup/encryption_settings"
 
 # Base classes for pages inside a navigation view.
 require_relative "pika_backup/dialog_page"
