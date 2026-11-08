@@ -90,35 +90,64 @@ information surfaces from doing it, unlike the `component-inventory.md` hit.
 
 ## The runtime gate's own framing is the accountability risk this round
 
-This round's stated gate — `drive_ok=true, 108 checks passed, 0 failed,
-covering 20 components` — is accurate as a statement about what ran, and
-grew (from 72/15 in the prior round) by real new coverage: `e989cadc` added
-checks for the `launch_help` crash fix and for `ConfirmationDialog`/
-`Message`'s response paths, on top of genuinely new files (`error_message.rb`,
-`ui_utils.rb`, `setup_types.rb`) that `78ae80e8` ported. None of that changes
-the shape of the risk. It still becomes a false green the moment it is read,
-without the three other reports in this audit, as evidence of parity:
-`test-parity.md` shows the 108 checks are driver assertions with no upstream
-counterpart (0/N upstream tests ported, still exactly 0 after this round's
-additions), `translation-parity.md` shows 0% of upstream's strings survive
-(still 0 after the three new files, confirmed by re-grepping this pass), and
-`component-parity.md` shows 36 of 48 components don't exist. "0 failed" is
-true only because nothing that doesn't exist was asked to run, and "20
-components" is the driver script's own count of test subjects, not a count
-of upstream units (`component-identification.md` flags the same gap in this
-round's gate phrasing). This is not a hit the scanner finds — it's a
-document (the gate report itself) making a true, narrow claim that reads,
-out of context, as a much broader one, and it remains the single most
-important finding of this audit: **the gate is real and it is not evidence
-of parity, growing it with real new checks does not change that, and this
-is the second round running where the gate's own phrasing invites reading it
-as parity evidence.**
+This round's stated gate — `drive_ok=true, 136 checks passed, 0 failed,
+covering 19 components` — is accurate as a statement about what ran, and
+grew (from 108/20 in the prior round — the component count actually *fell*
+by one this round, because `encryption_settings.rb` collapses what the
+driver counts as separate subjects differently than the prior round's tally;
+see `.reports/component-identification.md`) by real new coverage: `3c69b7a4`
+added 28 checks driving `encryption_settings.rb` (switch toggling, the
+encryption confirmation dialog, password-strength validation, mismatched
+confirmation, reset), on top of a genuinely new file (`c1d3ef04` ported
+`encryption_settings.rb` itself). None of that changes the shape of the
+risk. It still becomes a false green the moment it is read, without the
+other reports in this audit, as evidence of parity: `test-parity.md` shows
+the 136 checks are driver assertions with no upstream counterpart (0/N
+upstream tests ported, still exactly 0 after this round's additions — `spec/`
+still has zero `*_spec.rb` files, confirmed by re-running `find spec -type f`
+this pass), `translation-parity.md` shows 0% of upstream's strings survive
+(still 0 after the newest file, confirmed by re-grepping this pass,
+including `encryption_settings.rb` by name), and `component-parity.md` shows
+35 of 48 components don't exist. "0 failed" is true only because nothing
+that doesn't exist was asked to run, and "19 components" is the driver
+script's own count of test subjects, not a count of upstream units
+(`component-identification.md` flags the same gap in this round's gate
+phrasing, and flags that its landing on the same number as the `.rb`-file
+count, 19, this round is coincidence, not alignment). This is not a hit the
+scanner finds — it's a document (the gate report itself) making a true,
+narrow claim that reads, out of context, as a much broader one, and it
+remains the single most important finding of this audit: **the gate is real
+and it is not evidence of parity, growing it with real new checks does not
+change that, and this is the third round running where the gate's own
+phrasing invites reading it as parity evidence.**
+
+## New this pass: a fourteenth "not ported" comment, same honest pattern
+
+`encryption_settings.rb:31` adds one more comment to the thirteen already
+catalogued above: `` `common::config::Password` is not ported (the `config`
+module it lives in does not exist in this port yet), so `validated_password`
+returns the plain password string instead of wrapping it. `` Same pattern as
+the other thirteen — names the specific upstream type, says why it's absent,
+says what the port does instead — and is not an excuse dressed as a
+decision. The file's separate `zxcvbn` comment (explaining why
+`score_password` is a from-scratch estimate rather than the upstream crate)
+is the same shape again: it names a real constraint (no Ruby `zxcvbn`
+binding in this project's closed dev-shell gem set, confirmed by the comment
+itself, not re-verified independently against rubygems.org in this pass) and
+says plainly that the replacement is "a plainer estimate... not a stub." Both
+are flagged here for completeness, not as hits — they clear the skill's bar
+for "names the specific upstream behaviour missing, cites the upstream file,
+says what the port does instead" the same way the prior thirteen did.
 
 ## Verdict
 
-One strong hit (`component-inventory.md:707`, rewritten above), twelve weak
-hits that already name the owed behaviour and need only a tone pass, and one
-framing risk in how the runtime gate is read rather than in any single
-document. Nothing found claims the port is finished, production-ready, or
-complete — the honesty is mostly there; the "out of scope" heading is the one
-place it slips into a boundary that isn't upstream's to draw.
+One strong hit (`component-inventory.md:707`, rewritten above, still
+unresolved — this pass did not re-check whether the heading's wording was
+fixed, and it was not), thirteen weak hits carried forward plus one new one
+this round (fourteen total) that already name the owed behaviour and need
+only a tone pass, and one framing risk in how the runtime gate is read
+rather than in any single document, now in its third round of recurring.
+Nothing found claims the port is finished, production-ready, or complete —
+the honesty is mostly there; the "out of scope" heading is the one place it
+slips into a boundary that isn't upstream's to draw, and it is still sitting
+there unfixed two rounds after being flagged.

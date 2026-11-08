@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Upstream | `main` @ `253c7c4666d215eff2dc00a01409d1c6f299df6b` |
-| Port | `ruby` @ `e989cadc05c6667b19ede4c237bc66cd3aad0461` |
+| Port | `ruby` @ `3c69b7a4626cb417b53b239b0a316a9e69742862` |
 | Upstream catalogue | 38 languages (`po/LINGUAS`), 180 files in `po/POTFILES.in`, 11 translated help languages |
 | Upstream msgids (lower bound) | 331 distinct `gettext("...")` call sites in `.rs` + 211 `translatable="yes"` attributes across `.ui` files (39 of them plain `label` properties counted directly; the rest are other translatable property kinds — `title`, `tooltip-text`, etc. — not individually re-tallied in this pass) |
 | Port msgids | **0** |
@@ -49,14 +49,19 @@ grep -rn 'gettext\|_(\|FastGettext\|GetText' lib/ exe/    # 0 matches
   (confirmed by inspection — neither file names a translation gem).
 - No `_()`, `n_()`, `gettext()` or equivalent marker call anywhere in
   `lib/pika_backup/*.rb` or `exe/pika-backup`.
-- Every user-visible string in the 18 files that exist — "Pika Backup",
+- Every user-visible string in the 19 files that exist — "Pika Backup",
   "No Backup Configured", "_Setup Backup", "Back Up _Now", every status row
-  title, every tooltip in `component-inventory.md`'s own tables, and the new
+  title, every tooltip in `component-inventory.md`'s own tables, the
   `error_message.rb`/`ui_utils.rb`/`setup_types.rb` strings ("Close",
-  "Remove Backup Setup?", "Incomplete URL or borg syntax", etc.) — is a bare
-  Ruby string literal (confirmed by re-running
+  "Remove Backup Setup?", "Incomplete URL or borg syntax", etc.), and the
+  newest file's strings — `encryption_settings.rb`'s `DESCRIPTION` ("The
+  data stored in encrypted backups is password protected...") the "Use
+  Encryption" switch title, "Encryption Password"/"Repeat Password" row
+  titles, and every password-strength feedback string the strength meter
+  shows — is a bare Ruby string literal (confirmed by re-running
   `grep -rn 'gettext\|_(\|FastGettext\|GetText' lib/ exe/` against the
-  current tree: still 0 matches).
+  current tree: still 0 matches, including in `encryption_settings.rb`
+  specifically).
 
 ## Why this is total, not partial
 

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Upstream | `main` @ `253c7c4666d215eff2dc00a01409d1c6f299df6b` |
-| Port | `ruby` @ `e989cadc05c6667b19ede4c237bc66cd3aad0461` |
+| Port | `ruby` @ `3c69b7a4626cb417b53b239b0a316a9e69742862` |
 | Upstream tests | 4 integration-test files + inline `#[test]` units in 5 source files |
 | Ported | **0** |
 | Gaps | all of them |
@@ -60,27 +60,32 @@ would run zero examples. `spec/spec_helper.rb`'s own comment says as much:
 here" — that sentence describes a suite that has never had a model to test
 checked in yet, which is accurate but does not change the number: 0.
 
-## The runtime gate's "108 checks" is not this suite
+## The runtime gate's "136 checks" is not this suite
 
-The round's gate reports `drive_ok=true, 108 checks passed, 0 failed,
-covering 20 components`. Those 108 checks come from `test/drive_widgets.rb`,
+The round's gate reports `drive_ok=true, 136 checks passed, 0 failed,
+covering 19 components`. Those 136 checks come from `test/drive_widgets.rb`,
 a headless GTK driver script (the `ruby-gtk-testing` skill's harness), not
 from RSpec and not from any upstream test. Reading the file (confirmed by
-`grep -c 'd\.check(' test/drive_widgets.rb` → 108):
+`nix develop --command bash -c 'grep -c "d\.check(" test/drive_widgets.rb'`
+→ 136, matching the gate exactly):
 
-- It drives the 18 existing `.rb` files (`frequency.rb`, `weekday.rb`,
+- It drives the 19 existing `.rb` files (`frequency.rb`, `weekday.rb`,
   `prune_preset.rb`, `status_row.rb`, `folder_row.rb`, `location_tag.rb`,
   `app_window.rb`, `shortcuts_dialog.rb`, `about_dialog.rb`,
   `overview_page.rb`, `overview_row.rb`, `dialog_page.rb`, `spinner_page.rb`,
-  `error_message.rb`, `ui_utils.rb`, `setup_types.rb`, plus `application.rb`
-  and `status_icon.rb`) and screenshots the widget-bearing ones. The gate's
-  "20 components" is the driver's own count of named test subjects
-  (`SetupRepoLocation` and `SetupCommandLineArgs` inside `setup_types.rb`,
-  and `UiUtils`' free functions, are each counted as separate "components" by
-  the driver though they are not separate upstream units or separate `.rb`
-  files) — a driver-script tally, not an upstream-unit tally, and reading it
-  as 20/48 upstream components would be wrong in the generous direction.
-- Every one of its 108 `d.check(...)` assertions was **written for the
+  `error_message.rb`, `ui_utils.rb`, `setup_types.rb`,
+  `encryption_settings.rb`, plus `application.rb` and `status_icon.rb`) and
+  screenshots the widget-bearing ones. The gate's "19 components" is the
+  driver's own count of named test subjects (`SetupRepoLocation` and
+  `SetupCommandLineArgs` inside `setup_types.rb`, and `UiUtils`' free
+  functions, are each counted as separate "components" by the driver though
+  they are not separate upstream units or separate `.rb` files) — a
+  driver-script tally, not an upstream-unit tally. That it lands on the same
+  number as this pass's `.rb`-file count (19, see
+  `.reports/component-identification.md`) is coincidental, not evidence the
+  two tallies measure the same thing, and reading it as 19/48 upstream
+  components would still be wrong in the generous direction.
+- Every one of its 136 `d.check(...)` assertions was **written for the
   port**, from scratch, by whoever wrote the driver. None of them is named
   after, or asserts the same property as, an upstream `#[test]` or
   integration test. `borg_integration.rs`, `exclude_patterns.rs`,
@@ -91,19 +96,21 @@ from RSpec and not from any upstream test. Reading the file (confirmed by
 - The driver's own comments acknowledge the scope: `"a backend not wired
   yet"` appears next to checks that assert "does not crash" rather than
   asserting the real behaviour (remove backup, activate the schedule-status
-  row). The newest additions (`e989cadc`) add real coverage of
-  `launch_help`'s crash fix and of `ConfirmationDialog`/`Message`'s response
-  paths — genuine driver tests, still with no upstream `#[test]` counterpart,
-  since upstream has no unit test for either (they are `.rs` files with no
-  `#[test]` module of their own, confirmed by the `#[test]` grep below).
+  row). The newest additions (`3c69b7a4`, 28 checks) drive the newly-ported
+  `encryption_settings.rb` — switch toggling, the encryption confirmation
+  dialog's accept/cancel paths, password-strength validation, mismatched
+  confirmation, and reset — genuine driver tests of a real widget, still
+  with no upstream `#[test]` counterpart, since upstream's
+  `encryption_settings.rs` has no `#[test]` module of its own (confirmed by
+  the `#[test]` grep below, unchanged from the prior pass).
 
 This is exactly the shape the `test-parity` skill's worked example
 (planify-rb, 173 checks against 34 upstream tests, 0/34 parity) describes:
 **a larger, green, passing number that has no relationship to the upstream
-suite.** 108/108 driver checks passing is real and worth having, but it is
-not test parity, it is 108 checks in the `## Extra` bucket this skill's
-ledger format reserves for exactly this situation — and treating "108 checks
-passed, covering 20 components" as evidence of test parity, as the runtime
+suite.** 136/136 driver checks passing is real and worth having, but it is
+not test parity, it is 136 checks in the `## Extra` bucket this skill's
+ledger format reserves for exactly this situation — and treating "136 checks
+passed, covering 19 components" as evidence of test parity, as the runtime
 gate's phrasing invites, is the false-green this audit was asked to catch.
 
 ## Verdict

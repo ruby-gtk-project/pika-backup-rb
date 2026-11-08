@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Upstream | `main` @ `253c7c4666d215eff2dc00a01409d1c6f299df6b` |
-| Port | `ruby` @ `e989cadc05c6667b19ede4c237bc66cd3aad0461` |
-| Units with parity | **12 / 48** |
+| Port | `ruby` @ `3c69b7a4626cb417b53b239b0a316a9e69742862` |
+| Units with parity | **13 / 48** |
 
 Units counted from `.reports/component-inventory.md`'s own section headings
 (one `###` per upstream component). 48 is the inventory's count; nothing in
@@ -26,13 +26,14 @@ this review changes it.
 | Error presentation | `src/error.rs` | `error_message.rb` | parity on the dialog/notification split and the two named error strings (see Gap 5) |
 | Shared UI helpers | `src/utils.rs` | `ui_utils.rb` | parity on `ConfirmationDialog`, `folder_chooser_dialog`, `show_notice`, `new_action_row_with_gicon`, `clear`, `StatusLevel` (see Gap 5) |
 | Setup value types (half) | `widget/dialog/setup/types.rs` | `setup_types.rb` | parity on `SetupAction`/`SetupLocationKind`/URL parsing/arg parsing; `actions.rs` (repo create/peek/transfer/init) has no counterpart — **gap**, counted separately below |
+| Encryption settings | `widget/encryption_settings.{rs,ui}` | `encryption_settings.rb` | parity on the switch/password-entry/strength-meter tree, signals and validation logic, driven in `test/drive_widgets.rb` (28 new checks, confirmed by running the drive script); **one named exception** — upstream's `zxcvbn`-based scoring is replaced with a from-scratch estimate because no Ruby `zxcvbn` binding exists in the dev shell (see Gap 6) |
 
 Every unit not listed above (`detail_page.rb`, `backup_page.rb`,
 `archives_page.rb`, `schedule_page.rb`, `schedule_status.rb`,
-`encryption_settings.rb`, all 13 dialogs, all 11 setup-wizard pages,
+all 13 dialogs, all 11 setup-wizard pages,
 `setup_actions.rb`, `backup_status.rb`, `repo.rb`, `shell.rb` /
 `notification.rb` / `status.rb` / `operation.rb`, `toast_size_estimate.rb`)
-has **no port file at all**. That is 36 of 48 units with zero widgets, zero
+has **no port file at all**. That is 35 of 48 units with zero widgets, zero
 CSS, zero signals and zero translated strings on the port side — not a
 styling or behaviour gap, an existence gap. Per the skill's own rule
 ("Never report parity from the scan alone... never compare app-wide totals
@@ -106,24 +107,41 @@ line reading "rest unported":
    from exactly one site (`launch_help`) instead of the dozens upstream
    wires them into. Parity on the file that exists; a large reachability gap
    on how much of the app can actually trigger it.
+6. **Encryption settings — strength scoring is a substitute, not upstream's
+   algorithm.** Upstream scores password strength with the `zxcvbn` crate's
+   dictionary/sequence-aware model; the port's `score_password` is a
+   brute-force guess-count estimate with a small hand-written common-password
+   list standing in for zxcvbn's dictionary. The file's own comment is
+   candid about this (confirmed by reading it), and the 28 new driver checks
+   do exercise the substitute logic end to end (weak/common password flagged
+   invalid, mismatched confirmation flagged, strong+matching becomes valid) —
+   but a password zxcvbn would flag as weak for being a keyboard pattern or a
+   known-breached password may score differently under the port's estimate,
+   since the two algorithms are not the same model. This is a behavioural
+   divergence on a security-relevant surface, not merely an existence gap,
+   and is unresolved short of vendoring or reimplementing zxcvbn itself.
 
 ## Text axis
 
 Not evaluated per-component in this pass beyond the blanket finding in
 `.reports/translation-parity.md`: the port has zero translation markers
 anywhere in `lib/` or `exe/`, so every Text column in every table above that
-would otherwise read `✓` reads **✗** instead, for all 18 existing files, not
-only the 36 missing ones (plus `setup_actions.rb`, missing and not counted in
+would otherwise read `✓` reads **✗** instead, for all 19 existing files, not
+only the 35 missing ones (plus `setup_actions.rb`, missing and not counted in
 either). A component with correct widgets, correct CSS and correct signals
 still fails this axis if its strings are bare literals, and that is exactly
-the state of all 18 ported files.
+the state of all 19 ported files, including the new `encryption_settings.rb`
+(`DESCRIPTION`, the switch row title, both password-entry row titles, the
+strength-meter feedback strings — all bare Ruby string literals, confirmed by
+reading the file; zero `gettext`/`_()` calls).
 
 ## Verdict
 
-**12 / 48 units have component parity** (counting generously — the combo
-models, app shell and setup-types-half are partial). 36 units do not exist.
-Of the 12 that do, none has passed the text axis, because none has any
-translation markup to check. This is not a port with scattered gaps; it is a
-port where the
+**13 / 48 units have component parity** (counting generously — the combo
+models, app shell and setup-types-half are partial). 35 units do not exist.
+Of the 13 that do, none has passed the text axis, because none has any
+translation markup to check, and the one unit added this round
+(`encryption_settings.rb`) carries a named behavioural divergence on top of
+that (Gap 6). This is not a port with scattered gaps; it is a port where the
 onboarding flow, the entire detail view, every dialog and the backend
-plumbing that the existing 12 units call into are simply not there yet.
+plumbing that the existing 13 units call into are simply not there yet.

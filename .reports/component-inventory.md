@@ -14,15 +14,14 @@ and actions the `.ui` cannot show.
 Scan totals, upstream: **858 widget rows** across 107 files, **142 CSS class
 attachments**, **111 distinct signals**, **20 action references**.
 
-Port state, re-checked at this pass (through `e989cadc`, "Fix launch_help's
-uncaught exception and extend the drive script"): **18 of 48 components
-exist** (37.5%) — `lib/pika_backup/` holds 18 `.rb` files (the 13 from the
-prior pass, plus `app_window.rb`, `overview_page.rb`, `overview_row.rb` from
-`7d2613b5`, and `error_message.rb` + `ui_utils.rb` + `setup_types.rb` from
-`78ae80e8`; `setup/{types,actions}.rs` counts as one upstream unit and is only
+Port state, re-checked at this pass (through `3c69b7a4`, "Drive the
+EncryptionSettings widget and fix a warning-priority bug"): **19 of 48
+components exist** (39.6%) — `lib/pika_backup/` holds 19 `.rb` files (the 18
+from the prior pass, plus `encryption_settings.rb` from `c1d3ef04`;
+`setup/{types,actions}.rs` counts as one upstream unit and is only
 half-ported) plus `style.css` and the 17 upstream SVG icons. Every section
 heading below carries its state: *(ported)* for the ones that exist, nothing
-for the 30 that do not. `application.rb` now builds a real `AppWindow`
+for the 29 that do not. `application.rb` now builds a real `AppWindow`
 instead of a placeholder `Adwaita::StatusPage`, but `app.setup` still has no
 `SetupDialog` to present (see `.reports/component-parity.md`), so the entire
 onboarding flow, both remaining detail/archives/schedule tabs and every modal
@@ -338,7 +337,7 @@ option row (twice).
 ("Backup Location"); setting a file adds the `property` class and the basename
 as subtitle, clearing it removes the class.
 
-### `src/widget/encryption_settings.{rs,ui}` → `lib/pika_backup/encryption_settings.rb` — encryption block (`PkEncryptionSettings`)
+### `src/widget/encryption_settings.{rs,ui}` → `lib/pika_backup/encryption_settings.rb` — encryption block (`PkEncryptionSettings`) *(ported — `zxcvbn` has no Ruby binding in the dev shell; `score_password` is a from-scratch strength estimate, not a stub, see the file's own header comment)*
 
 | Widget | × | CSS | Signals | Notes |
 |---|---:|---|---|---|
