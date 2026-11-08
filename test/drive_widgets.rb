@@ -692,4 +692,66 @@ GtkDriver.drive(application, shots: SHOTS) do |d, app|
     d.check("confirm entry is blank") { @encryption.password_confirm_entry.text.to_s.empty? }
     d.check("valid again (unencrypted)") { @encryption.valid }
   end
+
+  d.step("BackupNote formats the two notification ids") do
+    d.check("warnings id") { PikaBackup::BackupNote.warnings("home").to_s == "backup-warnings-home" }
+    d.check("failed id") { PikaBackup::BackupNote.failed("home").to_s == "backup-failed-home" }
+    d.check("warnings? / failed? read back") do
+      PikaBackup::BackupNote.warnings("home").warnings? && !PikaBackup::BackupNote.failed("home").warnings?
+    end
+  end
+
+  d.step("the encryption password dialog presents with the repository location in its body") do
+    @password_result = :not_called
+    @encryption_password_dialog = PikaBackup::EncryptionPasswordDialog.new
+
+    @encryption_password_dialog.present_with(
+      app.window,
+      repo_location: "sftp://backup.example.com/home",
+      purpose: "Check",
+    ) { |password| @password_result = password }
+
+    d.check("a dialog is up") { !app.window.visible_dialog.nil? }
+    d.check("it is the encryption password dialog") { app.window.visible_dialog.equal?(@encryption_password_dialog) }
+    d.check("the body names the purpose and the location") do
+      body = @encryption_password_dialog.body
+      body.include?("Check") && body.include?("sftp://backup.example.com/home")
+    end
+    d.check("the callback has not run yet") { @password_result == :not_called }
+  end
+
+  d.step("screenshot the encryption password dialog") { d.shot("11-encryption-password") }
+
+  d.step("canceling the password dialog answers the callback with nil") do
+    @encryption_password_dialog.password_entry.text = "whatever"
+    cancel_button = find_widgets(app.window.visible_dialog) { |w| w.is_a?(Gtk::Button) && w.label == "_Cancel" }.first
+    cancel_button.signal_emit("clicked")
+
+    d.check("the dialog is gone") { app.window.visible_dialog.nil? }
+    d.check("the callback ran with nil") { @password_result.nil? }
+  end
+
+  d.step("presenting the password dialog again, with a keyring error this time") do
+    @password_result = :not_called
+
+    @encryption_password_dialog.present_with(
+      app.window,
+      repo_location: "sftp://backup.example.com/home",
+      purpose: "Check",
+      keyring_error: "No matching entry was found in the secret service.",
+    ) { |password| @password_result = password }
+
+    d.check("the keyring error is appended to the body") do
+      @encryption_password_dialog.body.include?("No matching entry was found")
+    end
+
+    @encryption_password_dialog.password_entry.text = "s3cr3t"
+  end
+
+  d.step("continuing answers the callback with the entered password") do
+    continue_button = find_widgets(app.window.visible_dialog) { |w| w.is_a?(Gtk::Button) && w.label == "Co_ntinue" }.first
+    continue_button.signal_emit("clicked")
+
+    d.check("the callback ran with the entered password") { @password_result == "s3cr3t" }
+  end
 end

@@ -708,13 +708,21 @@ XML either: `pika-backup/src/lib.rs` embeds `data/resources` with
 `gvdb_macros::include_gresource_from_dir!`, which is what makes libadwaita
 find `shortcuts-dialog.ui` automatically.
 
-## Out of scope for the UI port (noted for completeness)
+## Backend work still owed, not a drawn boundary
 
 `pika-backup-common/` (borg process driving, config, schedule requirements,
 password handling) and `pika-backup-monitor/` (the autostarted D-Bus monitor
-that fires scheduled backups and sends notifications) are separate binaries
-with no widgets. The monitor's notifications are user-facing and will need an
-equivalent eventually, but no `lib/*.rb` is proposed for them in this pass.
+that fires scheduled backups and sends notifications) have not been ported.
+This is not being filed as "out of scope" — upstream shipped all of it, and
+under full parity none of it stops counting just because it has no widget of
+its own. It is listed here as debt, and the same document's own Blockers
+section (#8, below) already says several components this document otherwise
+lists as in scope — device missing, unmount archives, prune, check, and the
+setup wizard's add-existing/create-new pages — cannot be driven end to end
+without at least this backend existing. The monitor's notifications are
+user-facing and need a real equivalent; no `lib/*.rb` corresponds to any of
+this yet, and that is a gap to close, not a line this port decided not to
+cross.
 
 ## Blockers to resolve before writing widget code
 

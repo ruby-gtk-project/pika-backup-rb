@@ -7,6 +7,9 @@ require_relative "pika_backup/frequency"
 require_relative "pika_backup/weekday"
 require_relative "pika_backup/prune_preset"
 
+# Backend plumbing with no GTK dependency of its own.
+require_relative "pika_backup/notification"
+
 # Reusable widgets the pages are built from.
 require_relative "pika_backup/status_icon"
 require_relative "pika_backup/status_row"
@@ -17,6 +20,9 @@ require_relative "pika_backup/encryption_settings"
 # Base classes for pages inside a navigation view.
 require_relative "pika_backup/dialog_page"
 require_relative "pika_backup/spinner_page"
+
+# Dialogs.
+require_relative "pika_backup/dialog/encryption_password_dialog"
 
 # The main window and the overview page it opens on.
 require_relative "pika_backup/overview_row"
