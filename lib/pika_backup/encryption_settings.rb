@@ -318,17 +318,21 @@ module PikaBackup
         KEYBOARD_ROWS.any? { |row| row.include?(lower) || row.reverse.include?(lower) }
       end
 
+      # Checked in the same priority `guesses_log10_for` scores by: a
+      # password that is both, say, a common password and a single short
+      # word (e.g. "password" itself) should be named for the stronger
+      # reason, not the weaker one.
       def warning_for(password)
-        if password.match?(/\A[a-zA-Z]+\z/) && password.length < 10
-          "A single word is easy to guess"
-        elsif sequential?(password)
-          "Avoid sequences like “abc” or “6543”"
+        if COMMON_PASSWORDS.include?(password.downcase)
+          "This is a very commonly used password"
         elsif repeated_character?(password)
           "Avoid repetitions like “aaa” or “abcabc”"
+        elsif sequential?(password)
+          "Avoid sequences like “abc” or “6543”"
         elsif keyboard_run?(password)
           "Avoid keyboard patterns"
-        elsif COMMON_PASSWORDS.include?(password.downcase)
-          "This is a very commonly used password"
+        elsif password.match?(/\A[a-zA-Z]+\z/) && password.length < 10
+          "A single word is easy to guess"
         else
           nil
         end

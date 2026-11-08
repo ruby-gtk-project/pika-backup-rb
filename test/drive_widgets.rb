@@ -579,4 +579,117 @@ GtkDriver.drive(application, shots: SHOTS) do |d, app|
   end
 
   d.step("screenshot the spinner page") { d.shot("06-spinner-page") }
+
+  d.step("the encryption settings widget starts unencrypted") do
+    @valid_changes = []
+    @encryption = PikaBackup::EncryptionSettings.new(
+      on_valid_changed: ->(v) { @valid_changes << v },
+    ).build
+
+    d.check("starts unencrypted") { !@encryption.encrypted }
+    d.check("an empty, unencrypted widget is valid") { @encryption.valid }
+    d.check("description text is set") { !@encryption.description.empty? }
+    d.check("the password fields are hidden") { !@encryption.revealer.reveal_child? }
+
+    app.window.content = page_host(PikaBackup::DialogPage.new("Encryption").tap do |page|
+      page.build
+      page.add(@encryption)
+    end.build)
+  end
+
+  d.step("screenshot the encryption settings, unencrypted") { d.shot("07-encryption-unencrypted") }
+
+  d.step("turning the switch on asks for confirmation first") do
+    @encryption.encrypted_switch.active = true
+
+    d.check("a confirmation dialog is up") { !app.window.visible_dialog.nil? }
+    d.check("it is the encryption confirmation dialog") do
+      app.window.visible_dialog.is_a?(Adwaita::AlertDialog) &&
+        app.window.visible_dialog.heading == "Use Encryption?"
+    end
+    d.check("encrypted has not flipped yet (waiting on the dialog)") { !@encryption.encrypted }
+  end
+
+  d.step("screenshot the confirmation dialog") { d.shot("08-encryption-confirm") }
+
+  d.step("canceling leaves encryption off") do
+    # AlertDialog has no programmatic "choose this response" call in the Ruby
+    # bindings (no `response`/`activate_response` method) — only
+    # `choose`/`choose_finish`, which the widget itself drives from a real
+    # button press. `Gtk::Button#activate` (the generic widget-activate
+    # signal) does not trigger it here; emitting the button's own "clicked"
+    # signal does, so that is what exercises `choose`'s callback for real,
+    # the same way a click would.
+    cancel_button = find_widgets(app.window.visible_dialog) { |w| w.is_a?(Gtk::Button) && w.label == "Cancel" }.first
+    cancel_button.signal_emit("clicked")
+
+    d.check("the switch snapped back off") { !@encryption.encrypted_switch.active? }
+    d.check("encrypted is still false") { !@encryption.encrypted }
+    d.check("still valid (unencrypted is always valid)") { @encryption.valid }
+  end
+
+  d.step("turning the switch on again and accepting enables it") do
+    @encryption.encrypted_switch.active = true
+  end
+
+  d.step("accepting the warning turns encryption on") do
+    use_button = find_widgets(app.window.visible_dialog) { |w| w.is_a?(Gtk::Button) && w.label == "Use Encryption" }.first
+    use_button.signal_emit("clicked")
+
+    d.check("encrypted is now true") { @encryption.encrypted }
+    d.check("the password fields reveal") { @encryption.revealer.reveal_child? }
+    d.check("empty password is invalid") { !@encryption.valid }
+    d.check("valid flipped false (was true when unencrypted)") { @valid_changes.last == false }
+  end
+
+  d.step("screenshot the encryption settings, encrypted but empty") { d.shot("09-encryption-empty") }
+
+  d.step("typing a weak password scores it low and stays invalid") do
+    @encryption.password_entry.text = "password"
+
+    d.check("validation names the common password") do
+      @encryption.validation_label.label == "This is a very commonly used password"
+    end
+    d.check("still invalid (no confirmation yet)") { !@encryption.valid }
+    valid, error = @encryption.validated_password
+    d.check("validated_password reports the missing confirmation") do
+      valid.nil? && error == "The passwords do not match"
+    end
+  end
+
+  d.step("a mismatched confirmation is flagged on the field") do
+    @encryption.password_confirm_entry.text = "something else"
+
+    d.check("confirm entry carries the error class") do
+      @encryption.password_confirm_entry.css_classes.include?("error")
+    end
+    d.check("validation reports the mismatch") { @encryption.validation_label.label == "Passwords do not match" }
+    d.check("still invalid") { !@encryption.valid }
+  end
+
+  d.step("matching confirmation with a strong password becomes valid") do
+    @encryption.password_entry.text = "Tr0ub4dor&3xyzzy!"
+    @encryption.password_confirm_entry.text = "Tr0ub4dor&3xyzzy!"
+
+    d.check("confirm entry's error class clears") do
+      !@encryption.password_confirm_entry.css_classes.include?("error")
+    end
+    d.check("now valid") { @encryption.valid }
+    d.check("valid flipped true") { @valid_changes.last == true }
+    valid, error = @encryption.validated_password
+    d.check("validated_password returns the password with no error") do
+      valid == "Tr0ub4dor&3xyzzy!" && error.nil?
+    end
+  end
+
+  d.step("screenshot the encryption settings, valid and strong") { d.shot("10-encryption-valid") }
+
+  d.step("reset blanks both fields and restores the given switch state") do
+    @encryption.reset(false)
+
+    d.check("switch is off") { !@encryption.encrypted_switch.active? }
+    d.check("password entry is blank") { @encryption.password_entry.text.to_s.empty? }
+    d.check("confirm entry is blank") { @encryption.password_confirm_entry.text.to_s.empty? }
+    d.check("valid again (unencrypted)") { @encryption.valid }
+  end
 end
