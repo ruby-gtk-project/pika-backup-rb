@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require_relative "rb/version"
-
 # The gem's entry point under its canonical `pika/backup/rb` path.
 #
 # Unlike the pilot port (tally), none of this port's pieces are display-free
@@ -11,3 +9,4 @@ require_relative "rb/version"
 # thing — spec/spec_helper.rb needs a display (xvfb-run) for that reason, same
 # as test/drive_widgets.rb.
 require_relative "../../pika_backup"
+require_relative "rb/version"
